@@ -39,6 +39,7 @@ export const relationshipDirective = new GraphQLDirective({
         },
         direction: {
             type: new GraphQLNonNull(RelationshipDirectionEnum),
+            description: "The direction of the relationship from the node."
         },
         properties: {
             type: GraphQLString,
