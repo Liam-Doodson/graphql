@@ -20,7 +20,8 @@
 import { DirectiveLocation, GraphQLDirective, GraphQLNonNull, GraphQLString } from "graphql";
 import { RelationshipDirectionEnum } from "./arguments/enums/RelationshipDirection";
 import { RelationshipQueryDirectionEnum } from "./arguments/enums/RelationshipQueryDirection";
-import { RelationshipQueryDirectionOption } from "../../constants";
+import { UpdateRelationshipOperationEnum } from "./arguments/enums/UpdateRelationshipOperation";
+import { RelationshipQueryDirectionOption, UpdateRelationshipOperationOptions } from "../../constants";
 
 export const relationshipDirective = new GraphQLDirective({
     name: "relationship",
@@ -42,6 +43,12 @@ export const relationshipDirective = new GraphQLDirective({
         properties: {
             type: GraphQLString,
             description: "The name of the interface containing the properties for this relationship.",
+        },
+        defaultUpdateOperation: {
+            type: UpdateRelationshipOperationEnum,
+            defaultValue: UpdateRelationshipOperationOptions.UPDATE,
+            description:
+                "Whether a new relationship should be created, or the existing relationship(s) should be updated.",
         },
     },
 });

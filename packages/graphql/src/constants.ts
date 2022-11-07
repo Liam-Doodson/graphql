@@ -100,6 +100,11 @@ export enum RelationshipQueryDirectionOption {
     UNDIRECTED_ONLY = "UNDIRECTED_ONLY",
 }
 
+export enum UpdateRelationshipOperationOptions {
+    UPDATE = "UPDATE",
+    CREATE = "CREATE",
+}
+
 export const META_CYPHER_VARIABLE = "meta";
 export const META_OLD_PROPS_CYPHER_VARIABLE = "oldProps";
 
