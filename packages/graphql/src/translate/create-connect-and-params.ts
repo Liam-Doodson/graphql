@@ -17,21 +17,18 @@
  * limitations under the License.
  */
 
+import Cypher, { and } from "@neo4j/cypher-builder";
 import type { Node, Relationship } from "../classes";
 import type { RelationField, Context } from "../types";
 import createWhereAndParams from "./where/create-where-and-params";
-import { createAuthAndParams } from "./create-auth-and-params";
+import { createAuthAndParams, createAuthPredicates } from "./create-auth-and-params";
 import { AUTH_FORBIDDEN_ERROR } from "../constants";
 import createSetRelationshipPropertiesAndParams from "./create-set-relationship-properties-and-params";
 import createRelationshipValidationString from "./create-relationship-validation-string";
 import type { CallbackBucket } from "../classes/CallbackBucket";
 import { createConnectionEventMetaObject } from "./subscriptions/create-connection-event-meta";
 import { filterMetaVariable } from "./subscriptions/filter-meta-variable";
-
-interface Res {
-    connects: string[];
-    params: any;
-}
+import { createWherePredicate } from "./where/create-where-predicate";
 
 function createConnectAndParams({
     withVars,
@@ -63,34 +60,31 @@ function createConnectAndParams({
     insideDoWhen?: boolean;
     includeRelationshipValidation?: boolean;
     isFirstLevel?: boolean;
-}): [string, any] {
+}): Cypher.Clause {
+    const namedWithVars = withVars.map((withVar) => new Cypher.NamedVariable(withVar));
+    const metaFilteredVars = filterMetaVariable(withVars).map((withVar) => new Cypher.NamedVariable(withVar));
+
     function createSubqueryContents(
         relatedNode: Node,
         connect: any,
         index: number
     ): { subquery: string; params: Record<string, any> } {
         let params = {};
-        const baseName = `${varName}${index}`;
-        const nodeName = `${baseName}_node`;
-        const relationshipName = `${baseName}_relationship`;
-        const inStr = relationField.direction === "IN" ? "<-" : "-";
-        const outStr = relationField.direction === "OUT" ? "->" : "-";
-        const relTypeStr = `[${relationField.properties || context.subscriptionsEnabled ? relationshipName : ""}:${
-            relationField.type
-        }]`;
-
-        const subquery: string[] = [];
+        const nodeRef = new Cypher.NamedNode(varName);
+        const parentNodeRef = new Cypher.NamedNode(parentVar);
+        const relationship = new Cypher.Variable();
         const labels = relatedNode.getLabelString(context);
-        const label = labelOverride ? `:${labelOverride}` : labels;
+        const overriddenLabels = labelOverride ? `:${labelOverride}` : labels;
 
-        subquery.push(`\tWITH ${filterMetaVariable(withVars).join(", ")}`);
+        nodeRef.hasLabels(overriddenLabels);
+
+        const matchClause = new Cypher.OptionalMatch(nodeRef);
+
+        matchClause.with(...namedWithVars);
         if (context.subscriptionsEnabled) {
-            const innerMetaStr = `, [] as meta`;
-            subquery.push(`\tWITH ${filterMetaVariable(withVars).join(", ")}${innerMetaStr}`);
+            matchClause.with(...metaFilteredVars, [new Cypher.RawCypher("[]"), new Cypher.NamedVariable("meta")]);
         }
-        subquery.push(`\tOPTIONAL MATCH (${nodeName}${label})`);
 
-        const whereStrs: string[] = [];
         if (connect.where) {
             // If _on is the only where key and it doesn't contain this implementation, don't connect it
             if (
@@ -101,7 +95,8 @@ function createConnectAndParams({
                 return { subquery: "", params: {} };
             }
 
-            const rootNodeWhereAndParams = createWhereAndParams({
+            const rootNodeWhereAndParams = createWherePredicate({
+                targetElement: nodeRef,
                 whereInput: {
                     ...Object.entries(connect.where.node).reduce((args, [k, v]) => {
                         if (k !== "_on") {
@@ -116,18 +111,16 @@ function createConnectAndParams({
                     }, {}),
                 },
                 context,
-                node: relatedNode,
-                varName: nodeName,
-                recursing: true,
+                element: relatedNode,
             });
-            if (rootNodeWhereAndParams[0]) {
-                whereStrs.push(rootNodeWhereAndParams[0]);
-                params = { ...params, ...rootNodeWhereAndParams[1] };
+            if (rootNodeWhereAndParams) {
+                matchClause.where(rootNodeWhereAndParams);
             }
 
             // For _on filters
             if (connect.where.node?._on?.[relatedNode.name]) {
-                const onTypeNodeWhereAndParams = createWhereAndParams({
+                const onTypeNodeWhereAndParams = createWherePredicate({
+                    targetElement: nodeRef,
                     whereInput: {
                         ...Object.entries(connect.where.node).reduce((args, [k, v]) => {
                             if (k !== "_on") {
@@ -142,73 +135,80 @@ function createConnectAndParams({
                         }, {}),
                     },
                     context,
-                    node: relatedNode,
-                    varName: `${nodeName}`,
-                    chainStr: `${nodeName}_on_${relatedNode.name}`,
-                    recursing: true,
+                    element: relatedNode,
                 });
-                if (onTypeNodeWhereAndParams[0]) {
-                    whereStrs.push(onTypeNodeWhereAndParams[0]);
-                    params = { ...params, ...onTypeNodeWhereAndParams[1] };
+                if (onTypeNodeWhereAndParams) {
+                    matchClause.where(onTypeNodeWhereAndParams);
                 }
             }
         }
 
         if (relatedNode.auth) {
-            const whereAuth = createAuthAndParams({
-                operations: "CONNECT",
+            // const whereAuth = createAuthAndParams({
+            //     operations: "CONNECT",
+            //     entity: relatedNode,
+            //     context,
+            //     where: { varName: nodeName, node: relatedNode },
+            // });
+            // if (whereAuth[0]) {
+            //     whereStrs.push(whereAuth[0]);
+            //     params = { ...params, ...whereAuth[1] };
+            // }
+            const authPredicate = createAuthPredicates({
                 entity: relatedNode,
+                operations: "CONNECT",
                 context,
-                where: { varName: nodeName, node: relatedNode },
+                where: { varName: nodeRef, node: relatedNode },
             });
-            if (whereAuth[0]) {
-                whereStrs.push(whereAuth[0]);
-                params = { ...params, ...whereAuth[1] };
+            if (authPredicate) {
+                matchClause.where(authPredicate);
             }
         }
 
-        if (whereStrs.length) {
-            subquery.push(`\tWHERE ${whereStrs.join(" AND ")}`);
-        }
+        const nodeMatrix: Array<{ node: Node; nodeRef: Cypher.Node }> = [{ node: relatedNode, nodeRef }];
+        if (!fromCreate) nodeMatrix.push({ node: parentNode, nodeRef: parentNodeRef });
 
-        const nodeMatrix: Array<{ node: Node; name: string }> = [{ node: relatedNode, name: nodeName }];
-        if (!fromCreate) nodeMatrix.push({ node: parentNode, name: parentVar });
-
-        const preAuth = nodeMatrix.reduce(
-            (result: Res, { node, name }, i) => {
-                if (!node.auth) {
-                    return result;
-                }
-
-                const [str, p] = createAuthAndParams({
-                    entity: node,
-                    operations: "CONNECT",
-                    context,
-                    escapeQuotes: Boolean(insideDoWhen),
-                    allow: { parentNode: node, varName: name, chainStr: `${name}${node.name}${i}_allow` },
-                });
-
-                if (!str) {
-                    return result;
-                }
-
-                result.connects.push(str);
-                result.params = { ...result.params, ...p };
-
+        const preAuth = nodeMatrix.reduce((result: Cypher.Predicate[], { node, nodeRef }, i) => {
+            if (!node.auth) {
                 return result;
-            },
-            { connects: [], params: {} }
-        );
+            }
 
-        if (preAuth.connects.length) {
+            // const [str, p] = createAuthAndParams({
+            //     entity: node,
+            //     operations: "CONNECT",
+            //     context,
+            //     escapeQuotes: Boolean(insideDoWhen),
+            //     allow: { parentNode: node, varName: name, chainStr: `${name}${node.name}${i}_allow` },
+            // });
+
+            const authPredicate = createAuthPredicates({
+                entity: node,
+                operations: "CONNECT",
+                context,
+                escapeQuotes: Boolean(insideDoWhen),
+                allow: {
+                    parentNode: node,
+                    varName: nodeRef,
+                    chainStr: new Cypher.RawCypher(
+                        (env) => `${env.getReferenceId(nodeRef)}${node.name}${i}_allow`
+                    ).build().cypher,
+                },
+            });
+
+            if (!authPredicate) {
+                return result;
+            }
+
+            result.push(authPredicate);
+            return result;
+        }, []);
+
+        if (preAuth.length) {
             const quote = insideDoWhen ? `\\"` : `"`;
-            subquery.push(`\tWITH ${[...withVars, nodeName].join(", ")}`);
-            subquery.push(
-                `\tCALL apoc.util.validate(NOT (${preAuth.connects.join(
-                    " AND "
-                )}), ${quote}${AUTH_FORBIDDEN_ERROR}${quote}, [0])`
+            const authClauses = preAuth.map(
+                (predicate) => new Cypher.apoc.ValidatePredicate(predicate, `${quote}${AUTH_FORBIDDEN_ERROR}${quote}`)
             );
-            params = { ...params, ...preAuth.params };
+            matchClause.where(Cypher.and(...authClauses));
         }
 
         /*
@@ -216,27 +216,45 @@ function createConnectAndParams({
            Replace with subclauses https://neo4j.com/developer/kb/conditional-cypher-execution/
            https://neo4j.slack.com/archives/C02PUHA7C/p1603458561099100
         */
-        subquery.push("\tCALL {");
-        subquery.push("\t\tWITH *");
-        const withVarsInner = [
-            ...withVars.filter((v) => v !== parentVar),
-            `collect(${nodeName}) as connectedNodes`,
-            `collect(${parentVar}) as parentNodes`,
-        ];
+        // const subquery = new Cypher.Call()
+        const connectedNodesVar = new Cypher.NamedVariable("connectedNodes");
+        const parentNodesVar = new Cypher.NamedVariable("parentNodes");
+        const subquery = new Cypher.With(
+            [Cypher.collect(nodeRef), connectedNodesVar],
+            [Cypher.collect(parentNodeRef), parentNodesVar]
+        );
+        // subquery.push("\tCALL {");
+        // subquery.push("\t\tWITH *");
+        // const withVarsInner = [
+        //     ...withVars.filter((v) => v !== parentVar),
+        //     `collect(${nodeName}) as connectedNodes`,
+        //     `collect(${parentVar}) as parentNodes`,
+        // ];
         if (context.subscriptionsEnabled) {
-            withVarsInner.push(`[] as meta`);
+            subquery.with(...metaFilteredVars, [new Cypher.RawCypher("[]"), new Cypher.NamedVariable("meta")]);
         }
-        subquery.push(`\t\tWITH ${filterMetaVariable(withVarsInner).join(", ")}`);
 
-        subquery.push("\t\tCALL {"); //
-        subquery.push("\t\t\tWITH connectedNodes, parentNodes"); //
-        subquery.push(`\t\t\tUNWIND parentNodes as ${parentVar}`);
-        subquery.push(`\t\t\tUNWIND connectedNodes as ${nodeName}`);
+        // subquery.push(`\t\tWITH ${filterMetaVariable(withVarsInner).join(", ")}`);
+
+        const innerSubquery = new Cypher.Unwind([connectedNodesVar, nodeRef], [parentNodesVar, nodeRef]);
+        innerSubquery.with(connectedNodesVar, parentNodesVar);
+
+        // subquery.push("\t\tCALL {"); //
+        // subquery.push("\t\t\tWITH connectedNodes, parentNodes"); //
+        // subquery.push(`\t\t\tUNWIND parentNodes as ${parentVar}`);
+        // subquery.push(`\t\t\tUNWIND connectedNodes as ${nodeName}`);
+
+        const relationshipPattern = new Cypher.Relationship({
+            source: nodeRef,
+            target: parentNodeRef,
+            type: relationField.type,
+        });
+        let mergeOrCreateClause: Cypher.Clause;
 
         if (connect.createAsDuplicate) {
-            subquery.push(`\t\t\tCREATE (${parentVar})${inStr}${relTypeStr}${outStr}(${nodeName})`);
+            mergeOrCreateClause = new Cypher.RawCypher((env) => `CREATE ${relationship.getCypher(env)}`);
         } else {
-            subquery.push(`\t\t\tMERGE (${parentVar})${inStr}${relTypeStr}${outStr}(${nodeName})`);
+            mergeOrCreateClause = new Cypher.Merge(relationshipPattern);
         }
 
         if (relationField.properties) {
@@ -245,13 +263,14 @@ function createConnectAndParams({
             ) as unknown as Relationship;
             const setA = createSetRelationshipPropertiesAndParams({
                 properties: connect.edge ?? {},
-                varName: relationshipName,
+                varName: relationshipPattern.pattern.name,
                 relationship,
                 operation: "CREATE",
                 callbackBucket,
             });
-            subquery.push(`\t\t\t${setA[0]}`);
-            params = { ...params, ...setA[1] };
+
+            // subquery.push(`\t\t\t${setA[0]}`);
+            // params = { ...params, ...setA[1] };
         }
 
         if (context.subscriptionsEnabled) {
@@ -263,7 +282,7 @@ function createConnectAndParams({
                     : [parentNode.name, relatedNode.name];
             const eventWithMetaStr = createConnectionEventMetaObject({
                 event: "connect",
-                relVariable: relationshipName,
+                relVariable: "relationshipVar", // TODO fix this
                 fromVariable,
                 toVariable,
                 typename: relationField.type,
