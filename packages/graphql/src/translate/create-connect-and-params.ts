@@ -73,6 +73,7 @@ function createConnectAndParams({
         const nodeRef = new Cypher.NamedNode(varName);
         const parentNodeRef = new Cypher.NamedNode(parentVar);
         const relationship = new Cypher.Variable();
+        const metaVar = new Cypher.NamedVariable("meta");
         const labels = relatedNode.getLabelString(context);
         const overriddenLabels = labelOverride ? `:${labelOverride}` : labels;
 
@@ -82,7 +83,7 @@ function createConnectAndParams({
 
         matchClause.with(...namedWithVars);
         if (context.subscriptionsEnabled) {
-            matchClause.with(...metaFilteredVars, [new Cypher.RawCypher("[]"), new Cypher.NamedVariable("meta")]);
+            matchClause.with(...metaFilteredVars, [new Cypher.RawCypher("[]"), metaVar]);
         }
 
         if (connect.where) {
@@ -219,7 +220,7 @@ function createConnectAndParams({
         // const subquery = new Cypher.Call()
         const connectedNodesVar = new Cypher.NamedVariable("connectedNodes");
         const parentNodesVar = new Cypher.NamedVariable("parentNodes");
-        const subquery = new Cypher.With(
+        const outerWithClause = new Cypher.With(
             [Cypher.collect(nodeRef), connectedNodesVar],
             [Cypher.collect(parentNodeRef), parentNodesVar]
         );
@@ -231,13 +232,13 @@ function createConnectAndParams({
         //     `collect(${parentVar}) as parentNodes`,
         // ];
         if (context.subscriptionsEnabled) {
-            subquery.with(...metaFilteredVars, [new Cypher.RawCypher("[]"), new Cypher.NamedVariable("meta")]);
+            outerWithClause.with(...metaFilteredVars, [new Cypher.RawCypher("[]"), metaVar]);
         }
 
         // subquery.push(`\t\tWITH ${filterMetaVariable(withVarsInner).join(", ")}`);
 
-        const innerSubquery = new Cypher.Unwind([connectedNodesVar, nodeRef], [parentNodesVar, nodeRef]);
-        innerSubquery.with(connectedNodesVar, parentNodesVar);
+        const innerWithClause = new Cypher.Unwind([connectedNodesVar, nodeRef], [parentNodesVar, nodeRef]);
+        innerWithClause.with(connectedNodesVar, parentNodesVar);
 
         // subquery.push("\t\tCALL {"); //
         // subquery.push("\t\t\tWITH connectedNodes, parentNodes"); //
@@ -250,6 +251,7 @@ function createConnectAndParams({
             type: relationField.type,
         });
         let mergeOrCreateClause: Cypher.Clause;
+        let setA: Cypher.RawCypher | undefined;
 
         if (connect.createAsDuplicate) {
             mergeOrCreateClause = new Cypher.RawCypher((env) => `CREATE ${relationship.getCypher(env)}`);
@@ -261,21 +263,26 @@ function createConnectAndParams({
             const relationship = context.relationships.find(
                 (x) => x.properties === relationField.properties
             ) as unknown as Relationship;
-            const setA = createSetRelationshipPropertiesAndParams({
-                properties: connect.edge ?? {},
-                varName: relationshipPattern.pattern.name,
-                relationship,
-                operation: "CREATE",
-                callbackBucket,
-            });
+            setA = new Cypher.RawCypher(
+                createSetRelationshipPropertiesAndParams({
+                    properties: connect.edge ?? {},
+                    varName: relationshipPattern.pattern.name,
+                    relationship,
+                    operation: "CREATE",
+                    callbackBucket,
+                })[0]
+            ); // TODO fix this
 
             // subquery.push(`\t\t\t${setA[0]}`);
             // params = { ...params, ...setA[1] };
         }
 
+        let innerSubquery: Cypher.Return;
+        const updateMetaVar = new Cypher.NamedVariable("update_meta");
+
         if (context.subscriptionsEnabled) {
             const [fromVariable, toVariable] =
-                relationField.direction === "IN" ? [nodeName, parentVar] : [parentVar, nodeName];
+                relationField.direction === "IN" ? [varName, parentVar] : [parentVar, varName];
             const [fromTypename, toTypename] =
                 relationField.direction === "IN"
                     ? [relatedNode.name, parentNode.name]
@@ -289,21 +296,37 @@ function createConnectAndParams({
                 fromTypename,
                 toTypename,
             });
-            subquery.push(`\t\t\tWITH ${eventWithMetaStr} as meta`);
-            subquery.push(`\t\t\tRETURN collect(meta) as update_meta`);
+            const eventMetaWithClause = new Cypher.With([new Cypher.RawCypher(eventWithMetaStr), metaVar]);
+            innerSubquery = new Cypher.Call(
+                Cypher.concat(innerWithClause, mergeOrCreateClause, setA, eventMetaWithClause)
+            ).return([Cypher.collect(metaVar), updateMetaVar]);
         } else {
-            subquery.push(`\t\t\tRETURN count(*) AS _`);
+            innerSubquery = new Cypher.Call(Cypher.concat(innerWithClause, mergeOrCreateClause, setA)).return([
+                Cypher.collect(new Cypher.RawCypher("*")),
+                new Cypher.NamedVariable("_"),
+            ]);
         }
 
-        subquery.push("\t\t}");
+        let outerSubquery: Cypher.Return;
+
+        // subquery.push("\t\t}");
 
         if (context.subscriptionsEnabled) {
-            subquery.push(`\t\tWITH meta + update_meta as meta`);
-            subquery.push(`\t\tRETURN meta AS connect_meta`);
-            subquery.push("\t}");
+        //     subquery.push(`\t\tWITH meta + update_meta as meta`);
+        //     subquery.push(`\t\tRETURN meta AS connect_meta`);
+        //     subquery.push("\t}");
+            const finalWith = new Cypher.With(
+                [new Cypher.RawCypher(env => `${metaVar.getCypher(env)}  ${updateMetaVar.getCypher(env)}`), new Cypher.NamedVariable("*")]
+            );
+            outerSubquery = new Cypher.Call(Cypher.concat(outerWithClause, innerSubquery, finalWith)).return([
+                Cypher.collect(metaVar),
+                new Cypher.NamedVariable("connect_meta"),
+            ]);
         } else {
-            subquery.push(`\t\tRETURN count(*) AS _`);
-            subquery.push("\t}");
+            outerSubquery = new Cypher.Call(Cypher.concat(outerWithClause, innerSubquery)).return([
+                Cypher.count(new Cypher.RawCypher("*")),
+                new Cypher.NamedVariable("_"),
+            ]);
         }
 
         let innerMetaStr = "";
