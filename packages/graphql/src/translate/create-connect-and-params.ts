@@ -20,13 +20,14 @@
 import type { Node, Relationship } from "../classes";
 import type { RelationField, Context } from "../types";
 import createWhereAndParams from "./where/create-where-and-params";
-import { createAuthAndParams } from "./create-auth-and-params";
+import { createAuthAndParams, createAuthPredicates } from "./create-auth-and-params";
 import { AUTH_FORBIDDEN_ERROR } from "../constants";
 import createSetRelationshipPropertiesAndParams from "./create-set-relationship-properties-and-params";
 import createRelationshipValidationString from "./create-relationship-validation-string";
 import type { CallbackBucket } from "../classes/CallbackBucket";
 import { createConnectionEventMetaObject } from "./subscriptions/create-connection-event-meta";
 import { filterMetaVariable } from "./subscriptions/filter-meta-variable";
+import Cypher from "@neo4j/cypher-builder";
 
 interface Res {
     connects: string[];
@@ -64,6 +65,9 @@ function createConnectAndParams({
     includeRelationshipValidation?: boolean;
     isFirstLevel?: boolean;
 }): [string, any] {
+    const withVarRefs = withVars.map((withVar) => new Cypher.NamedVariable(withVar));
+    const metaFilteredWithRefs = filterMetaVariable(withVars).map((withVar) => new Cypher.NamedVariable(withVar));
+
     function createSubqueryContents(
         relatedNode: Node,
         connect: any,
@@ -485,54 +489,63 @@ function createConnectAndParams({
     }
 
     function reducer(res: Res, connect: any, index: number): Res {
+        const parentNodeRef = new Cypher.NamedNode(parentVar);
+        const metaVar = new Cypher.NamedVariable("meta");
+        const connectMetaVar = new Cypher.NamedVariable("connect_meta");
+        const statement = new Cypher.With();
         if (parentNode.auth && !fromCreate) {
-            const whereAuth = createAuthAndParams({
-                operations: "CONNECT",
+            const wherePredicate = createAuthPredicates({
                 entity: parentNode,
+                operations: "CONNECT",
                 context,
-                where: { varName: parentVar, node: parentNode },
+                where: { varName: parentNodeRef, node: parentNode },
             });
-            if (whereAuth[0]) {
-                res.connects.push(`WITH ${withVars.join(", ")}`);
-                res.connects.push(`WHERE ${whereAuth[0]}`);
-                res.params = { ...res.params, ...whereAuth[1] };
+            if (wherePredicate) {
+                statement.with(...withVarRefs);
+                statement.where(wherePredicate);
             }
         }
 
         if (isFirstLevel) {
-            res.connects.push(`WITH ${withVars.join(", ")}`);
+            statement.with(...withVarRefs);
         }
 
-        const inner: string[] = [];
+        const inner: Cypher.Clause[] = [];
         if (relationField.interface) {
-            const subqueries: string[] = [];
+            const subqueries: Cypher.RawCypher[] = [];
             refNodes.forEach((refNode, i) => {
                 const subquery = createSubqueryContents(refNode, connect, i);
                 if (subquery.subquery) {
-                    subqueries.push(subquery.subquery);
-                    res.params = { ...res.params, ...subquery.params };
+                    subqueries.push(new Cypher.RawCypher(() => [subquery.subquery, subquery.params]));
                 }
             });
             if (subqueries.length > 0) {
                 if (context.subscriptionsEnabled) {
-                    const withStatement = `WITH ${filterMetaVariable(withVars).join(
-                        ", "
-                    )}, connect_meta + meta AS meta`;
-                    inner.push(subqueries.join(`\n}\n${withStatement}\nCALL {\n\t`));
-                } else {
-                    inner.push(subqueries.join("\n}\nCALL {\n\t"));
+                    const withClause = new Cypher.With(...metaFilteredWithRefs, [
+                        new Cypher.RawCypher((env) => `${connectMetaVar.getCypher(env)} + ${metaVar.getCypher(env)}`),
+                        metaVar,
+                    ]);
+                    subqueries.forEach(subquery => inner.push(Cypher.concat(withClause, new Cypher.Call(subquery))))
+                    // inner.push(subqueries.join(`\n}\n${withClause}\nCALL {\n\t`));
                 }
+                // else {
+                //     inner.push(subqueries.join("\n}\nCALL {\n\t"));
+                // }
             }
         } else {
             const subquery = createSubqueryContents(refNodes[0], connect, index);
-            inner.push(subquery.subquery);
-            res.params = { ...res.params, ...subquery.params };
+            // inner.push(subquery.subquery);
+            inner.push(new Cypher.Call(new Cypher.RawCypher(() => [subquery.subquery, subquery.params])))
         }
 
         if (inner.length > 0) {
-            res.connects.push("CALL {");
-            res.connects.push(...inner);
-            res.connects.push("}");
+            const result = new Cypher.Call(Cypher.concat(...inner))
+            // res.connects.push("CALL {");
+            // res.connects.push(...inner);
+            // res.connects.push("}");
+            const { cypher, params } = result.build();
+            res.connects.push(cypher);
+            res.params = { ...res.params, ...params };
 
             if (context.subscriptionsEnabled) {
                 res.connects.push(`WITH connect_meta + meta AS meta, ${filterMetaVariable(withVars).join(", ")}`);
