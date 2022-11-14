@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-import type { DirectiveNode, FieldDefinitionNode, StringValueNode } from "graphql";
+import type { BooleanValueNode, DirectiveNode, FieldDefinitionNode, StringValueNode } from "graphql";
 import { RelationshipQueryDirectionOption } from "../constants";
 
 type RelationshipMeta = {
@@ -25,6 +25,7 @@ type RelationshipMeta = {
     type: string;
     properties?: string;
     queryDirection: RelationshipQueryDirectionOption;
+    connectAsDuplicate: boolean;
 };
 
 function getRelationshipMeta(
@@ -64,6 +65,9 @@ function getRelationshipMeta(
         throw new Error("@relationship properties not a string");
     }
 
+    const connectAsDuplicateArg = directive.arguments?.find((x) => x.name.value === "connectAsDuplicate");
+    const connectAsDuplicate = Boolean((connectAsDuplicateArg?.value as BooleanValueNode)?.value)
+
     const direction = directionArg.value.value as "IN" | "OUT";
     const type = typeArg.value.value;
     const properties = (propertiesArg?.value as StringValueNode)?.value;
@@ -73,6 +77,7 @@ function getRelationshipMeta(
         type,
         properties,
         queryDirection,
+        connectAsDuplicate,
     };
 }
 

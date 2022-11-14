@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-import { DirectiveLocation, GraphQLDirective, GraphQLNonNull, GraphQLString } from "graphql";
+import { DirectiveLocation, GraphQLBoolean, GraphQLDirective, GraphQLNonNull, GraphQLString } from "graphql";
 import { RelationshipDirectionEnum } from "./arguments/enums/RelationshipDirection";
 import { RelationshipQueryDirectionEnum } from "./arguments/enums/RelationshipQueryDirection";
 import { RelationshipQueryDirectionOption } from "../../constants";
@@ -42,6 +42,12 @@ export const relationshipDirective = new GraphQLDirective({
         properties: {
             type: GraphQLString,
             description: "The name of the interface containing the properties for this relationship.",
+        },
+        connectAsDuplicate: {
+            type: new GraphQLNonNull(GraphQLBoolean),
+            defaultValue: true,
+            description:
+                "Whether or not to create a duplicate of relationship if it already exists, instead of just updating any properties.",
         },
     },
 });

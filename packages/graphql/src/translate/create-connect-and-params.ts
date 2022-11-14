@@ -233,7 +233,14 @@ function createConnectAndParams({
         subquery.push(`\t\t\tUNWIND parentNodes as ${parentVar}`);
         subquery.push(`\t\t\tUNWIND connectedNodes as ${nodeName}`);
 
-        if (connect.asDuplicate) {
+        let connectAsDuplicate: boolean | undefined;
+        if (connect.asDuplicate !== undefined) {
+            connectAsDuplicate = connect.asDuplicate;
+        } else {
+            connectAsDuplicate = relationField.connectAsDuplicate;
+        }
+
+        if (connectAsDuplicate) {
             subquery.push(`\t\t\tCREATE (${parentVar})${inStr}${relTypeStr}${outStr}(${nodeName})`);
         } else {
             subquery.push(`\t\t\tMERGE (${parentVar})${inStr}${relTypeStr}${outStr}(${nodeName})`);

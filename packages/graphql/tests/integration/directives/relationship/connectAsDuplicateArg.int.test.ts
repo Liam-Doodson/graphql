@@ -74,13 +74,17 @@ describe("Relationship properties - connect", () => {
             const typeDefs = `
                 type ${movieType.name} {
                     title: String!
-                    actors: [${actorType.name}!]! @relationship(type: "ACTED_IN", properties: "${actedInInterface.name}", direction: IN)
+                    actors: [${actorType.name}!]! @relationship(
+                        type: "ACTED_IN", properties: "${actedInInterface.name}",
+                        direction: IN,
+                        connectAsDuplicate: true
+                    )
                 }
 
                 type ${actorType.name} {
                     name: String!
                     movies: [${movieType.name}!]! @relationship(
-                        type: "ACTED_IN", properties: "${actedInInterface.name}", direction: OUT, connectAsDuplicates: true
+                        type: "ACTED_IN", properties: "${actedInInterface.name}", direction: OUT
                     )
                 }
 

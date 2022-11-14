@@ -156,6 +156,7 @@ export interface RelationField extends BaseField {
     union?: UnionField;
     interface?: InterfaceField;
     queryDirection: RelationshipQueryDirectionOption;
+    connectAsDuplicate?: boolean;
 }
 
 export interface ConnectionField extends BaseField {
