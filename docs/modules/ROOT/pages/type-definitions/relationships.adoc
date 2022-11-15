@@ -102,6 +102,23 @@ type Person {
 * `DIRECTED_ONLY`: Only directed queries can be perform on this relationship.
 * `UNDIRECTED_ONLY`: Only undirected queries can be perform on this relationship.
 
+=== ConnectAsDuplicate
+By default, when new connections are defined of the same type, between the same two nodes, any existing relationships are updated to have the properties of the new relationship.
+However, it is also possible to change this default behaviour so that duplicate relationships are created. This is done by defining `connectAsDuplicate: true` on the `@relationship` directive:
+
+[source, graphql, indent=0]
+----
+type Movie {
+    title: String!
+    released: Int!
+    actors: [Person!]! @relationship(type: "ACTED_IN", properties: "ActedIn", direction: IN, connectAsDuplicate: true)
+    director: Person! @relationship(type: "DIRECTED", direction: IN)
+}
+----
+
+It is also possible to define whether or not individual connections should be created as duplicates, or if they should override existing connections.
+See more about this behaviour xref::type-definitions/relationships.adoc#as-duplicate[here].
+
 == Inserting data
 
 Nested mutations mean that there are many ways in which you can insert data into your database through the GraphQL schema. You can't create a Movie without adding a director, and you can do that by either creating the director first and then creating and connecting the movie, or you can create both the Movie and the director in the same mutation. With the latter approach:
@@ -179,6 +196,7 @@ mutation CreateActor {
 
 Note the selection of the `actedInMoviesConnection` field in order to query the `role` relationship property.
 
+[[as-duplicate]]
 It is also possible update nodes and to create duplicates of the same connection by specifying `asDuplicate: true` on connections that should not override existing ones.
 In this case, Tom Hanks also played Scrooge in the Polar Express:
 
