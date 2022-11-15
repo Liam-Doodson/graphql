@@ -33,6 +33,7 @@ describe("Connect inputs when using connectAsDuplicate argument", () => {
     const actorName2 = "Name";
     const screenTime1 = 321;
     const screenTime2 = 2;
+    const runTime = 104718;
 
     beforeAll(async () => {
         neo4j = new Neo4j();
@@ -82,7 +83,7 @@ describe("Connect inputs when using connectAsDuplicate argument", () => {
 
                     type ${actorType.name} {
                         name: String!
-                        movies: [${movieType.name}!]! @relationship(
+                        productions: [${movieType.name}!]! @relationship(
                             type: "ACTED_IN", properties: "${actedInInterface.name}", direction: OUT
                         )
                     }
@@ -218,7 +219,7 @@ describe("Connect inputs when using connectAsDuplicate argument", () => {
 
                     type ${actorType.name} {
                         name: String!
-                        movies: [${movieType.name}!]! @relationship(
+                        productions: [${movieType.name}!]! @relationship(
                             type: "ACTED_IN", properties: "${actedInInterface.name}", direction: OUT
                         )
                     }
@@ -341,7 +342,7 @@ describe("Connect inputs when using connectAsDuplicate argument", () => {
 
                     type ${actorType.name} {
                         name: String!
-                        movies: [${movieType.name}!]! @relationship(
+                        productions: [${movieType.name}!]! @relationship(
                             type: "ACTED_IN", properties: "${actedInInterface.name}", direction: OUT
                         )
                     }
@@ -449,7 +450,7 @@ describe("Connect inputs when using connectAsDuplicate argument", () => {
 
                     type ${actorType.name} {
                         name: String!
-                        movies: [${movieType.name}!]! @relationship(
+                        productions: [${movieType.name}!]! @relationship(
                             type: "ACTED_IN", properties: "${actedInInterface.name}", direction: OUT
                         )
                     }
@@ -580,7 +581,7 @@ describe("Connect inputs when using connectAsDuplicate argument", () => {
 
                     type ${actorType.name} {
                         name: String!
-                        movies: [${movieType.name}!]! @relationship(
+                        productions: [${movieType.name}!]! @relationship(
                             type: "ACTED_IN", properties: "${actedInInterface.name}", direction: OUT
                         )
                     }
@@ -719,7 +720,7 @@ describe("Connect inputs when using connectAsDuplicate argument", () => {
 
                     type ${actorType.name} {
                         name: String!
-                        movies: [${movieType.name}!]! @relationship(
+                        productions: [${movieType.name}!]! @relationship(
                             type: "ACTED_IN", properties: "${actedInInterface.name}", direction: OUT
                         )
                     }
@@ -853,7 +854,7 @@ describe("Connect inputs when using connectAsDuplicate argument", () => {
 
                     type ${actorType.name} {
                         name: String!
-                        movies: [${movieType.name}!]! @relationship(
+                        productions: [${movieType.name}!]! @relationship(
                             type: "ACTED_IN", properties: "${actedInInterface.name}", direction: OUT
                         )
                     }
@@ -980,7 +981,7 @@ describe("Connect inputs when using connectAsDuplicate argument", () => {
 
                     type ${actorType.name} {
                         name: String!
-                        movies: [${movieType.name}!]! @relationship(
+                        productions: [${movieType.name}!]! @relationship(
                             type: "ACTED_IN", properties: "${actedInInterface.name}", direction: OUT
                         )
                     }
@@ -1108,7 +1109,7 @@ describe("Connect inputs when using connectAsDuplicate argument", () => {
 
                     type ${actorType.name} {
                         name: String!
-                        movies: [${movieType.name}!]! @relationship(
+                        productions: [${movieType.name}!]! @relationship(
                             type: "ACTED_IN", properties: "${actedInInterface.name}", direction: OUT
                         )
                     }
@@ -1255,7 +1256,7 @@ describe("Connect inputs when using connectAsDuplicate argument", () => {
 
                     type ${actorType.name} {
                         name: String!
-                        movies: [${movieType.name}!]! @relationship(
+                        productions: [${movieType.name}!]! @relationship(
                             type: "ACTED_IN", properties: "${actedInInterface.name}", direction: OUT
                         )
                     }
@@ -1411,7 +1412,7 @@ describe("Connect inputs when using connectAsDuplicate argument", () => {
 
                     type ${actorType.name} {
                         name: String!
-                        movies: [${actedInUnion.name}!]! @relationship(
+                        productions: [${actedInUnion.name}!]! @relationship(
                             type: "ACTED_IN", properties: "${actedInInterface.name}",
                             direction: OUT,
                             connectAsDuplicate: true
@@ -1430,7 +1431,7 @@ describe("Connect inputs when using connectAsDuplicate argument", () => {
                         ${actorType.operations.update}(
                             where: { name: $actorName1 }
                             connect: {
-                                movies: {        
+                                productions: {        
                                     ${movieType.name}: [
                                         {
                                             where: { node: { title: $movieTitle } }
@@ -1446,7 +1447,7 @@ describe("Connect inputs when using connectAsDuplicate argument", () => {
                         ) {
                             ${actorType.plural} {
                                 name
-                                moviesConnection {
+                                productionsConnection {
                                     edges {
                                         screenTime
                                         node {
@@ -1499,7 +1500,7 @@ describe("Connect inputs when using connectAsDuplicate argument", () => {
                             [actorType.plural]: [
                                 {
                                     name: actorName1,
-                                    moviesConnection: {
+                                    productionsConnection: {
                                         edges: expect.toIncludeSameMembers([
                                             {
                                                 screenTime: screenTime1,
@@ -1548,7 +1549,7 @@ describe("Connect inputs when using connectAsDuplicate argument", () => {
 
                     type ${actorType.name} {
                         name: String!
-                        movies: [${actedInUnion.name}!]! @relationship(
+                        productions: [${actedInUnion.name}!]! @relationship(
                             type: "ACTED_IN", properties: "${actedInInterface.name}",
                             direction: OUT,
                             connectAsDuplicate: false
@@ -1567,7 +1568,7 @@ describe("Connect inputs when using connectAsDuplicate argument", () => {
                         ${actorType.operations.update}(
                             where: { name: $actorName1 }
                             connect: {
-                                movies: {        
+                                productions: {        
                                     ${movieType.name}: [
                                         {
                                             where: { node: { title: $movieTitle } }
@@ -1583,7 +1584,7 @@ describe("Connect inputs when using connectAsDuplicate argument", () => {
                         ) {
                             ${actorType.plural} {
                                 name
-                                moviesConnection {
+                                productionsConnection {
                                     edges {
                                         screenTime
                                         node {
@@ -1636,7 +1637,7 @@ describe("Connect inputs when using connectAsDuplicate argument", () => {
                             [actorType.plural]: [
                                 {
                                     name: actorName1,
-                                    moviesConnection: {
+                                    productionsConnection: {
                                         edges: [
                                             {
                                                 screenTime: screenTime2,
@@ -1673,7 +1674,7 @@ describe("Connect inputs when using connectAsDuplicate argument", () => {
 
                     type ${actorType.name} {
                         name: String!
-                        movies: [${actedInUnion.name}!]! @relationship(
+                        productions: [${actedInUnion.name}!]! @relationship(
                             type: "ACTED_IN", properties: "${actedInInterface.name}",
                             direction: OUT,
                         )
@@ -1691,7 +1692,7 @@ describe("Connect inputs when using connectAsDuplicate argument", () => {
                         ${actorType.operations.update}(
                             where: { name: $actorName1 }
                             connect: {
-                                movies: {        
+                                productions: {        
                                     ${movieType.name}: [
                                         {
                                             where: { node: { title: $movieTitle } }
@@ -1717,7 +1718,7 @@ describe("Connect inputs when using connectAsDuplicate argument", () => {
                         ) {
                             ${actorType.plural} {
                                 name
-                                moviesConnection {
+                                productionsConnection {
                                     edges {
                                         screenTime
                                         node {
@@ -1774,7 +1775,7 @@ describe("Connect inputs when using connectAsDuplicate argument", () => {
                             [actorType.plural]: [
                                 {
                                     name: actorName1,
-                                    moviesConnection: {
+                                    productionsConnection: {
                                         edges: expect.toIncludeSameMembers([
                                             {
                                                 screenTime: screenTime2,
@@ -1817,7 +1818,7 @@ describe("Connect inputs when using connectAsDuplicate argument", () => {
 
                     type ${actorType.name} {
                         name: String!
-                        movies: [${actedInUnion.name}!]! @relationship(
+                        productions: [${actedInUnion.name}!]! @relationship(
                             type: "ACTED_IN", properties: "${actedInInterface.name}",
                             direction: OUT,
                             connectAsDuplicate: false
@@ -1836,7 +1837,7 @@ describe("Connect inputs when using connectAsDuplicate argument", () => {
                         ${actorType.operations.update}(
                             where: { name: $actorName1 }
                             connect: {
-                                movies: {        
+                                productions: {        
                                     ${movieType.name}: [
                                         {
                                             where: { node: { title: $movieTitle } }
@@ -1863,7 +1864,7 @@ describe("Connect inputs when using connectAsDuplicate argument", () => {
                         ) {
                             ${actorType.plural} {
                                 name
-                                moviesConnection {
+                                productionsConnection {
                                     edges {
                                         screenTime
                                         node {
@@ -1920,7 +1921,7 @@ describe("Connect inputs when using connectAsDuplicate argument", () => {
                             [actorType.plural]: [
                                 {
                                     name: actorName1,
-                                    moviesConnection: {
+                                    productionsConnection: {
                                         edges: expect.toIncludeSameMembers([
                                             {
                                                 screenTime: screenTime2,
@@ -1969,7 +1970,7 @@ describe("Connect inputs when using connectAsDuplicate argument", () => {
 
                     type ${actorType.name} {
                         name: String!
-                        movies: [${actedInUnion.name}!]! @relationship(
+                        productions: [${actedInUnion.name}!]! @relationship(
                             type: "ACTED_IN", properties: "${actedInInterface.name}",
                             direction: OUT,
                             connectAsDuplicate: true
@@ -1988,7 +1989,7 @@ describe("Connect inputs when using connectAsDuplicate argument", () => {
                         ${actorType.operations.update}(
                             where: { name: $actorName1 }
                             connect: {
-                                movies: {        
+                                productions: {        
                                     ${movieType.name}: [
                                         {
                                             asDuplicate: false
@@ -2017,7 +2018,7 @@ describe("Connect inputs when using connectAsDuplicate argument", () => {
                         ) {
                             ${actorType.plural} {
                                 name
-                                moviesConnection {
+                                productionsConnection {
                                     edges {
                                         screenTime
                                         node {
@@ -2074,7 +2075,7 @@ describe("Connect inputs when using connectAsDuplicate argument", () => {
                             [actorType.plural]: [
                                 {
                                     name: actorName1,
-                                    moviesConnection: {
+                                    productionsConnection: {
                                         edges: expect.toIncludeSameMembers([
                                             {
                                                 screenTime: screenTime2,
@@ -2125,7 +2126,7 @@ describe("Connect inputs when using connectAsDuplicate argument", () => {
 
                     type ${actorType.name} {
                         name: String!
-                        movies: [${actedInUnion.name}!]! @relationship(
+                        productions: [${actedInUnion.name}!]! @relationship(
                             type: "ACTED_IN", properties: "${actedInInterface.name}",
                             direction: OUT,
                             connectAsDuplicate: true
@@ -2145,7 +2146,7 @@ describe("Connect inputs when using connectAsDuplicate argument", () => {
                             input: [
                                 {
                                     name: $actorName1
-                                    movies: {
+                                    productions: {
                                         ${movieType.name}: {        
                                             connect: [
                                                 {
@@ -2165,7 +2166,7 @@ describe("Connect inputs when using connectAsDuplicate argument", () => {
                         ) {
                             ${actorType.plural} {
                                 name
-                                moviesConnection {
+                                productionsConnection {
                                     edges {
                                         screenTime
                                         node {
@@ -2218,7 +2219,7 @@ describe("Connect inputs when using connectAsDuplicate argument", () => {
                             [actorType.plural]: [
                                 {
                                     name: actorName1,
-                                    moviesConnection: {
+                                    productionsConnection: {
                                         edges: expect.toIncludeSameMembers([
                                             {
                                                 screenTime: screenTime1,
@@ -2261,7 +2262,7 @@ describe("Connect inputs when using connectAsDuplicate argument", () => {
 
                     type ${actorType.name} {
                         name: String!
-                        movies: [${actedInUnion.name}!]! @relationship(
+                        productions: [${actedInUnion.name}!]! @relationship(
                             type: "ACTED_IN", properties: "${actedInInterface.name}",
                             direction: OUT,
                             connectAsDuplicate: false
@@ -2281,7 +2282,7 @@ describe("Connect inputs when using connectAsDuplicate argument", () => {
                             input: [
                                 {
                                     name: $actorName1
-                                    movies: {
+                                    productions: {
                                         ${movieType.name}: {        
                                             connect: [
                                                 {
@@ -2301,7 +2302,7 @@ describe("Connect inputs when using connectAsDuplicate argument", () => {
                         ) {
                             ${actorType.plural} {
                                 name
-                                moviesConnection {
+                                productionsConnection {
                                     edges {
                                         screenTime
                                         node {
@@ -2354,7 +2355,7 @@ describe("Connect inputs when using connectAsDuplicate argument", () => {
                             [actorType.plural]: [
                                 {
                                     name: actorName1,
-                                    moviesConnection: {
+                                    productionsConnection: {
                                         edges: expect.toIncludeSameMembers([
                                             {
                                                 screenTime: screenTime2,
@@ -2391,7 +2392,7 @@ describe("Connect inputs when using connectAsDuplicate argument", () => {
 
                     type ${actorType.name} {
                         name: String!
-                        movies: [${actedInUnion.name}!]! @relationship(
+                        productions: [${actedInUnion.name}!]! @relationship(
                             type: "ACTED_IN", properties: "${actedInInterface.name}",
                             direction: OUT
                         )
@@ -2410,7 +2411,7 @@ describe("Connect inputs when using connectAsDuplicate argument", () => {
                             input: [
                                 {
                                     name: $actorName1
-                                    movies: {
+                                    productions: {
                                         ${movieType.name}: {        
                                             connect: [
                                                 {
@@ -2430,7 +2431,7 @@ describe("Connect inputs when using connectAsDuplicate argument", () => {
                         ) {
                             ${actorType.plural} {
                                 name
-                                moviesConnection {
+                                productionsConnection {
                                     edges {
                                         screenTime
                                         node {
@@ -2483,7 +2484,7 @@ describe("Connect inputs when using connectAsDuplicate argument", () => {
                             [actorType.plural]: [
                                 {
                                     name: actorName1,
-                                    moviesConnection: {
+                                    productionsConnection: {
                                         edges: expect.toIncludeSameMembers([
                                             {
                                                 screenTime: screenTime2,
@@ -2520,7 +2521,7 @@ describe("Connect inputs when using connectAsDuplicate argument", () => {
 
                     type ${actorType.name} {
                         name: String!
-                        movies: [${actedInUnion.name}!]! @relationship(
+                        productions: [${actedInUnion.name}!]! @relationship(
                             type: "ACTED_IN", properties: "${actedInInterface.name}",
                             direction: OUT,
                             connectAsDuplicate: false
@@ -2540,7 +2541,7 @@ describe("Connect inputs when using connectAsDuplicate argument", () => {
                             input: [
                                 {
                                     name: $actorName1
-                                    movies: {
+                                    productions: {
                                         ${movieType.name}: {        
                                             connect: [
                                                 {
@@ -2573,7 +2574,7 @@ describe("Connect inputs when using connectAsDuplicate argument", () => {
                         ) {
                             ${actorType.plural} {
                                 name
-                                moviesConnection {
+                                productionsConnection {
                                     edges {
                                         screenTime
                                         node {
@@ -2629,7 +2630,7 @@ describe("Connect inputs when using connectAsDuplicate argument", () => {
                             [actorType.plural]: [
                                 {
                                     name: actorName1,
-                                    moviesConnection: {
+                                    productionsConnection: {
                                         edges: expect.toIncludeSameMembers([
                                             {
                                                 screenTime: screenTime1,
@@ -2678,7 +2679,7 @@ describe("Connect inputs when using connectAsDuplicate argument", () => {
 
                     type ${actorType.name} {
                         name: String!
-                        movies: [${actedInUnion.name}!]! @relationship(
+                        productions: [${actedInUnion.name}!]! @relationship(
                             type: "ACTED_IN", properties: "${actedInInterface.name}",
                             direction: OUT,
                             connectAsDuplicate: true
@@ -2698,7 +2699,7 @@ describe("Connect inputs when using connectAsDuplicate argument", () => {
                             input: [
                                 {
                                     name: $actorName1
-                                    movies: {
+                                    productions: {
                                         ${movieType.name}: {        
                                             connect: [
                                                 {
@@ -2732,7 +2733,7 @@ describe("Connect inputs when using connectAsDuplicate argument", () => {
                         ) {
                             ${actorType.plural} {
                                 name
-                                moviesConnection {
+                                productionsConnection {
                                     edges {
                                         screenTime
                                         node {
@@ -2788,7 +2789,7 @@ describe("Connect inputs when using connectAsDuplicate argument", () => {
                             [actorType.plural]: [
                                 {
                                     name: actorName1,
-                                    moviesConnection: {
+                                    productionsConnection: {
                                         edges: expect.toIncludeSameMembers([
                                             {
                                                 screenTime: screenTime2,
@@ -2816,6 +2817,175 @@ describe("Connect inputs when using connectAsDuplicate argument", () => {
                     });
 
                     expect(neo4jResult.records).toHaveLength(3);
+                } finally {
+                    await session.close();
+                }
+            });
+        });
+    });
+
+    describe("Interfaces", () => {
+        let movieType: UniqueType;
+        let actorType: UniqueType;
+        let actedInInterface: UniqueType;
+        let productionInterface: UniqueType;
+        let showType: UniqueType;
+
+        beforeEach(() => {
+            movieType = generateUniqueType("Movie");
+            actorType = generateUniqueType("Actor");
+            showType = generateUniqueType("Show");
+            actedInInterface = generateUniqueType("ActedIn");
+            productionInterface = generateUniqueType("Production");
+        });
+
+        afterEach(async () => {
+            const session = await neo4j.getSession();
+
+            try {
+                await session.run(`
+                    MATCH (movies:${movieType.name})
+                    MATCH (actors:${actorType.name})
+                    MATCH (shows:${showType.name})
+                    DETACH DELETE movies, actors, shows
+                `);
+            } finally {
+                await session.close();
+            }
+        });
+
+        describe("Update mutation", () => {
+            test("Creates duplicate connections when connectAsDuplicate set to true", async () => {
+                const typeDefs = `
+                    interface ${productionInterface.name} {
+                        title: String!
+                        actors: [${actorType.name}!]! @relationship(type: "ACTED_IN", direction: IN, properties: "${actedInInterface.name}")
+                    }
+
+                    type ${movieType.name} implements ${productionInterface.name} {
+                        title: String!
+                        runTime: Int!
+                        actors: [${actorType.name}!]! @relationship(type: "ACTED_IN", direction: IN, properties: "${actedInInterface.name}")
+                    }
+
+                    type ${showType.name} implements ${productionInterface.name} {
+                        title: String!
+                        actors: [${actorType.name}!]! @relationship(type: "ACTED_IN", direction: IN, properties: "${actedInInterface.name}")
+                    }
+
+                    interface ${actedInInterface.name} @relationshipProperties {
+                        screenTime: Int!
+                    }
+
+                    type ${actorType.name} {
+                        name: String!
+                        productions: [${productionInterface.name}!]! @relationship(
+                            type: "ACTED_IN",
+                            direction: OUT,
+                            properties: "${actedInInterface.name}",
+                            connectAsDuplicate: true
+                        )
+                    }
+                `;
+
+                const source = `
+                    mutation($movieTitle: String!, $actorName2: String!, $screenTime1: Int!, $screenTime2: Int!) {
+                        ${actorType.operations.update}(
+                            where: { name: $actorName2 }
+                            connect: {
+                                productions: [
+                                    {
+                                        where: { node: { title: $movieTitle } }
+                                        edge: { screenTime: $screenTime1 }
+                                    },
+                                    {
+                                        where: { node: { title: $movieTitle } }
+                                        edge: { screenTime: $screenTime2 }
+                                    },
+                                ]
+                            }
+                        ) {
+                            ${actorType.plural} {
+                                name
+                                productionsConnection {
+                                    edges {
+                                        screenTime
+                                        node {
+                                            title
+                                            ... on ${movieType.name} {
+                                                runTime
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                `;
+
+                const neoSchema = new Neo4jGraphQL({
+                    typeDefs,
+                });
+
+                const session = await neo4j.getSession();
+
+                try {
+                    await session.run(
+                        `
+                            CREATE (:${movieType.name} { title: $movieTitle, runTime: $runTime })
+                            CREATE (:${showType.name} { title: $showName })
+                            CREATE (:${actorType.name} { name: $actorName2 })
+                        `,
+                        { movieTitle, runTime, showName, actorName2 }
+                    );
+
+                    const gqlResult = await graphql({
+                        schema: await neoSchema.getSchema(),
+                        source,
+                        contextValue: neo4j.getContextValuesWithBookmarks(session.lastBookmark()),
+                        variableValues: { movieTitle, actorName2, screenTime1, screenTime2 },
+                    });
+
+                    const cypher = `
+                        MATCH ()<-[r:ACTED_IN]-(:${actorType.name})
+                        RETURN r
+                    `;
+                    const neo4jResult = await session.run(cypher, {
+                        movieTitle,
+                        screenTime: screenTime1,
+                        actorName: actorName1,
+                    });
+
+                    expect(gqlResult.errors).toBeFalsy();
+                    expect(gqlResult.data).toEqual({
+                        [actorType.operations.update]: {
+                            [actorType.plural]: [
+                                {
+                                    name: actorName2,
+                                    productionsConnection: {
+                                        edges: expect.toIncludeSameMembers([
+                                            {
+                                                screenTime: screenTime1,
+                                                node: {
+                                                    title: movieTitle,
+                                                    runTime
+                                                },
+                                            },
+                                            {
+                                                screenTime: screenTime2,
+                                                node: {
+                                                    title: movieTitle,
+                                                    runTime
+                                                },
+                                            },
+                                        ]),
+                                    },
+                                },
+                            ],
+                        },
+                    });
+
+                    expect(neo4jResult.records).toHaveLength(2);
                 } finally {
                     await session.close();
                 }
