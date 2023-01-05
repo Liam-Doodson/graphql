@@ -93,7 +93,7 @@ export function createConnectionOperation({
         }
 
         const matchClause = new Cypher.Match(matchPattern);
-        const countRef = new Cypher.Variable();
+        
 
         let whereClause: Cypher.Match | Cypher.With = matchClause;
         let innerSubqueriesAndWhereClause: Cypher.CompositeClause | undefined;
@@ -110,32 +110,27 @@ export function createConnectionOperation({
 
         const subqueryContents = Cypher.concat(
             matchClause,
-            innerSubqueriesAndWhereClause,
-            new Cypher.Return([Cypher.count(relationship), countRef])
+            innerSubqueriesAndWhereClause
         );
 
-        const subqueryCall = new Cypher.Call(subqueryContents).innerWith(parentNode);
+        const countRef = new Cypher.Variable();
 
-        operations.push(getCountOperation(listPredicateStr, countRef));
-        subqueries = Cypher.concat(subqueryCall);
+        switch (listPredicateStr) {
+            case "any":
+                operations.push(new Cypher.Exists(subqueryContents));
+                break;
+            case "all":
+            case "none":
+                operations.push(Cypher.not(new Cypher.Exists(subqueryContents)));
+                break;
+            case "single":
+                subqueryContents.concat(new Cypher.Return([Cypher.count(relationship), countRef]));
+                subqueries = Cypher.concat(new Cypher.Call(subqueryContents).innerWith(parentNode));
+                operations.push(Cypher.eq(countRef, new Cypher.Literal(1)));
+        }
     });
 
     return { predicate: Cypher.and(...operations) as Cypher.BooleanOp | undefined, preComputedSubquery: subqueries };
-}
-
-function getCountOperation(listPredicate: string, countRef: Cypher.Variable): Cypher.Predicate {
-    switch (listPredicate) {
-        case "all":
-            return Cypher.eq(countRef, new Cypher.Literal(0));
-        case "any":
-            return Cypher.gt(countRef, new Cypher.Literal(0));
-        case "none":
-            return Cypher.eq(countRef, new Cypher.Literal(0));
-        case "single":
-            return Cypher.eq(countRef, new Cypher.Literal(1));
-        default:
-            throw new Error(`Unknown predicate ${listPredicate}`);
-    }
 }
 
 export function createConnectionWherePropertyOperation({
