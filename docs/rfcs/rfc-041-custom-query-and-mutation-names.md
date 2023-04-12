@@ -63,8 +63,8 @@ As the `user` type has been defined on both subgraphs, the following are duplica
     * `UpdateUsersMutationResponse`
     * `UserAggregateSelection`
     * The following types would also have been duplicated if a `@relationship` field was defined on the `User` type in the `Users` subgraph:
-        * UserEdge
-        * UsersConnection
+        * `UserEdge`
+        * `UsersConnection`
 
 As a result, users need to be able to specify custom names for these types/fields so that they can be "de-collided".
 
@@ -72,7 +72,71 @@ Additionally, the generated names do not make sense in this context. For example
 
 # Solution
 
+## Add a new `@generatedNames` directive
 
+```gql
+input GenerateQueryArguments {
+    query: String
+}
+
+input GenerateMutationArguments {
+    create: String
+    update: String
+    delete: String
+}
+
+directive @generatedNames(queries: String, mutations: GenerateMutationArguments) on OBJECT
+```
+
+This directive can be used to rename the generated `queries`/`mutations` as below:
+
+#### Type Defs
+
+```gql
+type User @key(fields: "id") @generatedNames(
+    queries: "usersWithReviews"
+    mutations: {
+        create: "addReviewsToUsers"
+        update: "updateUsersReviews"
+        delete: "deleteUsersReviews"
+    }
+) {
+    id: ID!
+    reviews: [Review!]! @relationship(type: "WROTE_REVIEW", direction: OUT)
+}
+```
+
+#### Generated queries/mutations/types/inputs
+
+* `Query` fields - for all of these `users` has been replaced by the `queries` input (`usersWithReviews`):
+    * `usersWithReviews`
+    * `usersWithReviewsConnection`
+    * `usersWithReviewsAggregations`
+* `Mutation` fields:
+    * `addReviewsToUsers` - the `mutations.create` input
+    * `updateUsersReviews` - the `mutations.update` input
+    * `deleteUsersReviews` - the `mutations.delete` input
+* `INPUT_OBJECT` types:
+    * `AddReviewsToUsersInput` - `UserCreate` replaced by the uppercase of the `mutations.create` input (`AddReviewsToUsers`)
+    * `UsersWithReviewsOptions` - `User` replaced by the uppercase of the `queries` input (`UsersWithReviews`)
+    * `UsersWithReviewsSort` - `User` replaced by the uppercase of the `queries` input (`UsersWithReviews`)
+    * `UpdateUsersReviewsInput` - `UserUpdate` replaced by the uppercase of the `mutations.update` input (`UpdateUsersReviews`)
+    * `UsersWithReviewsWhere` - `User` replaced by the uppercase of the `queries` input (`UsersWithReviews`)
+    * `UpdateUsersReviewsConnectInput` - `User` replaced by the uppercase of the `mutations.update` input (`UpdateUsersReviews`)
+    * `UpdateUsersReviewsDeleteInput` - `User` replaced by the uppercase of the `mutations.update` input (`UpdateUsersReviews`)
+    * `UpdateUsersReviewsDisconnectInput` - `User` replaced by the uppercase of the `mutations.update` input (`UpdateUsersReviews`)
+    * `UpdateUsersReviewsRelationInput` - `User` replaced by the uppercase of the `mutations.update` input (`UpdateUsersReviews`)
+* types:
+    * `User` (not a problem in this example as all are marked with the `@key` directive)
+    * `AddReviewsToUsersMutationResponse` - `CreateUsers` replaced by the uppercase of the `mutations.create` input (`AddReviewsToUsers`)
+    * `UpdateUsersReviewsMutationResponse` - `UpdateUsers` replaced by the uppercase of the `mutations.update` input (`UpdateUsersReviews`)
+    * `UsersWithReviewsAggregateSelection` - `User` replaced by the uppercase of the `queries` input (`UsersWithReviews`)
+    * `UsersWithReviewsEdge` - `User` replaced by the uppercase of the `queries` input (`UsersWithReviews`)
+    * `UsersWithReviewsConnection` - `User` replaced by the uppercase of the `queries` input (`UsersWithReviews`)
+
+## Alternatives Considered
+
+* For federation, generated types can be marked with `@shareable` to avoid collision issues. However, it makes sense to still rename these types along with the related queries/mutations so it is clear what they relate to. Additionally, `@shareable` cannot be defined on an `INPUT_OBJECT`.
 
 # Appendix
 
