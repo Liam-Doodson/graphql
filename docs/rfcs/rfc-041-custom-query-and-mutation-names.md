@@ -68,6 +68,8 @@ As the `user` type has been defined on both subgraphs, the following are duplica
 
 As a result, users need to be able to specify custom names for these types/fields so that they can be "de-collided".
 
+Additionally, the generated names do not make sense in this context. For example, the `createUsers` mutation on the `Reviews` subgraph is not actually creating a new user (it does not allow creating the required `name` field). Instead, it is used to update a user by creating a list of reviews they have written. Therefore, a name such as `addReviewsToUser` may be more appropriate.
+
 # Solution
 
 
