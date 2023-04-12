@@ -72,12 +72,9 @@ Additionally, the generated names do not make sense in this context. For example
 
 # Solution
 
-## Add a new `@generatedNames` directive
+Add a new `@generatedNames` directive:
 
 ```gql
-input GenerateQueryArguments {
-    query: String
-}
 
 input GenerateMutationArguments {
     create: String
@@ -137,6 +134,10 @@ type User @key(fields: "id") @generatedNames(
 ## Alternatives Considered
 
 * For federation, generated types can be marked with `@shareable` to avoid collision issues. However, it makes sense to still rename these types along with the related queries/mutations so it is clear what they relate to. Additionally, `@shareable` cannot be defined on an `INPUT_OBJECT`.
+
+# Out of Scope
+
+* There are additional static types that have colliding names within the generated subgraph schemas (e.g. `CreateInfo`). These do not need to be renamed and can instead be marked with `@shareable`. This work is defined elsewhere.
 
 # Appendix
 
